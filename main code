@@ -1,0 +1,1185 @@
+﻿#first setting-------
+bigc<-function(Ypred){
+  tt=numeric(length(Ypred))
+  tt[union(which(Ypred=="a"),union(which(Ypred=="b"),union(which(Ypred=="k"),union(which(Ypred=="l"),union(which(Ypred=="m"),which(Ypred=="n"))))))]=1
+  tt[union(which(Ypred=="c"),union(which(Ypred=="d"),union(which(Ypred=="f"),which(Ypred=="g"))))]=2
+  tt[which(Ypred=="e")]=3
+  tt[which(Ypred=="h")]=4
+  tt[which(Ypred=="i")]=5
+  tt[which(Ypred=="o")]=6
+  tt[which(Ypred=="j")]=7
+  return(tt)
+}
+small_to_big<-function(Ypred){
+  tt=numeric(length(Ypred))
+  tt[union(which(Ypred==1),union(which(Ypred==2),union(which(Ypred==14),union(which(Ypred==15),which(Ypred==16)))))]=1
+  tt[union(which(Ypred==3),union(which(Ypred==4),union(which(Ypred==7),which(Ypred==8))))]=2
+  tt[which(Ypred==6)]=3
+  tt[which(Ypred==9)]=4
+  tt[which(Ypred==10)]=5
+  tt[which(Ypred==17)]=6
+  tt[which(Ypred==12)]=7
+  return(tt)
+}
+library("mice")
+set.seed(159753456)
+
+#ZIP CODE------------------------
+f=list(
+  c(100,103,104,105,106,108,110,111,112,114,115,116),
+  c(200,201,202,203,204,205,206),
+  c(207,208,220,221,222,223,224,226,227,228,231,232,233,234,235,236,237,238,239,241,242,243,244,247,248,249,251,252,253),
+  c(300),
+  c(302,303,304,305,306,307,308,310,311,312,313,314,315),
+  c(400,401,402,403,404,406,407,408),
+  c(411,412,413,414,420,421,422,423,424,426,427,428,429,432,433,434,435,436,437,438,439),
+  c(600),
+  c(602:608,611:616,621:625),
+  c(700,701,702,704,708,709),
+  c(710:727,730:737,741:745),
+  c(800:807,811:813),
+  c(814,815,820:833,840,842:849,851,852),
+  c(900:909,911:913,920:929,931,932,940:947),
+  c(950:959,961:966),
+  c(970:979,981:983),
+  c(880:885),
+  c(890:896),
+  c(630:638,640,643,646:649,651:655),
+  c(500,502:516,520:528,530),
+  c(540,541,542,544,545,546,551:558),
+  c(320,324:328,330,333:338),
+  c(350:358,360:369),
+  c(260:270,272),
+  c(209:212),
+  c(817,819),
+  c(290)
+)
+
+#input data-----
+a=read.csv("C:\\Users\\CathayBigdata2018_14\\Desktop\\2018大數據競賽_複賽資料_20181002\\訓練集\\TRAIN_MAIN.csv")
+a=a[order(a$CUST_ID),]
+
+#zipcode
+
+#temp=substring(a$ZIP_CODE,1,3)
+#ind=numeric(length(temp))
+#for (i in 1:27) {
+#  for (j in 1:length(temp)) {
+#    temp4=f[[i]]
+#    if(length(which(temp4==temp[j]))!=0) ind[j]=i
+#  }
+#}
+#a$ZIP_CODE=ind
+#zipcode
+b=read.csv("C:\\Users\\CathayBigdata2018_14\\Desktop\\2018大數據競賽_複賽資料_20181002\\訓練集\\TRAIN_ADD.csv")
+c=read.csv("C:\\Users\\CathayBigdata2018_14\\Desktop\\2018大數據競賽_複賽資料_20181002\\測試集\\TEST_MAIN.csv")
+c=c[order(c$CUST_ID),]
+
+#zipcode
+#temp=substring(c$ZIP_CODE,1,3)
+#ind=numeric(length(temp))
+#for (i in 1:27) {
+#  for (j in 1:length(temp)) {
+#    temp4=f[[i]]
+#    if(length(which(temp4==temp[j]))!=0) ind[j]=i
+#  }
+#}
+#c$ZIP_CODE=ind
+#zipcode
+d=read.csv("C:\\Users\\CathayBigdata2018_14\\Desktop\\2018大數據競賽_複賽資料_20181002\\測試集\\TEST_ADD.csv")
+e=read.csv("C:\\Users\\CathayBigdata2018_14\\Desktop\\2018大數據競賽_複賽資料_20181002\\CUST.csv")
+e=e[order(e$CUST_ID),]
+#input data-----
+
+#delete variable and standardlize variable-----
+e=e[,-c(8,9,10)] #delete disease
+e=e[,-c(5,6)] #delete height weight
+e=e[,-c(11:16)] #delete purpose
+
+#now_income change into minmax
+temp=e$NOW_INCOME[which(!is.na(e$NOW_INCOME))]
+temp=(temp-min(temp))/(max(temp)-min(temp))
+e$NOW_INCOME[which(!is.na(e$NOW_INCOME))]=temp
+e$DISEASE1[which(is.na(e$DISEASE1))]=1
+colnames(e)[5]="DISEASE"
+
+#split main train X and Y----
+temp = as.numeric(table(a$CUST_ID))
+temp = cumsum(temp)
+a_X = a[-temp,]
+a_Y = a[temp,]
+temp = which(table(a$CUST_ID)==1)
+a_Y=rbind(a_Y,a_Y[temp,])
+a_Y=a_Y[-temp,]
+#fill NA------
+e_2.0 = mice(e[,c(7:13)],m=5,maxit = 50,meth="sample")
+e_true2.0 = complete(e_2.0,1)
+e_1 = e
+e_1[,c(7:13)] = e_true2.0
+
+#change marriage edu career into dummy-------
+tt=e_1$MARRIAGE
+temp=unclass(tt)
+d_M=matrix(0,length(temp),max(temp))
+for (i in 1:max(temp)) {
+  d_M[which(temp==i),i]=1
+}
+e_1=cbind(e_1[,c(1:5)],d_M,e_1[,-c(1:6)])
+colnames(e_1)[6:9]=c("MARRIAGE_1","MARRIAGE_2","MARRIAGE_3","MARRIAGE_4")
+tt=e_1$EDUCATION
+temp=unclass(tt)
+d_M=matrix(0,length(temp),max(temp))
+for (i in 1:max(temp)) {
+  d_M[which(temp==i),i]=1
+}
+e_1=cbind(e_1[,c(1:13)],d_M,e_1[,-c(1:14)])
+colnames(e_1)[14:17]=c("EDU_1","EDU_2","EDU_3","EDU_4")
+e_1=e_1[,-16]
+tt=e_1$CAREER
+temp=unclass(tt)
+d_M=matrix(0,length(temp),max(temp))
+for (i in 1:max(temp)) {
+  d_M[which(temp==i),i]=1
+}
+e_1=cbind(e_1[,c(1:16)],d_M,e_1[,-c(1:17)])
+colnames(e_1)[17:38]=c("CAR_1","CAR_2","CAR_3","CAR_4","CAR_5","CAR_6","CAR_7","CAR_8","CAR_9","CAR_10","CAR_11","CAR_12","CAR_13","CAR_14","CAR_15","CAR_16","CAR_17","CAR_18","CAR_19","CAR_20","CAR_21","CAR_22")
+
+
+
+
+
+
+
+#based on policy ID change dummy variable-----
+tt=a_X$PRODUCT_TYPE
+temp=unclass(tt)
+J_X=matrix(0,length(temp),max(temp))
+for (i in 1:max(temp)) {
+  J_X[which(temp==i),i]=1
+}
+a_X=cbind(a_X[,c(1:4)],J_X,a_X[,c(6:17)])
+
+tt=a_Y$PRODUCT_TYPE
+temp=unclass(tt)
+J_Y=matrix(0,length(temp),max(temp))
+for (i in 1:max(temp)) {
+  J_Y[which(temp==i),i]=1
+}
+a_Y=cbind(a_Y[,c(1:4)],J_Y,a_Y[,c(6:17)])
+#c
+tt=c$PRODUCT_TYPE
+temp=unclass(tt)
+M=matrix(0,length(temp),max(temp))
+for (i in 1:max(temp)) {
+  M[which(temp==i),i]=1
+}
+c=cbind(c[,c(1:4)],M,c[,c(6:17)])  
+
+#based on CUST ID dummy variable------
+temp1=as.numeric(table(a_X$CUST_ID))
+temp2=cumsum(temp1)
+temp3=cumsum(c(1,temp1[-(length(temp1))]))
+nJ_X=matrix(0,length(temp2),ncol(J_X))
+for (i in 1:length(temp2)) {
+  if(temp2[i]-temp3[i]>0){
+    nJ_X[i,]=colSums(J_X[c(temp3[i]:temp2[i]),])
+  }else{
+    nJ_X[i,]=J_X[c(temp3[i]:temp2[i]),]
+  }
+  
+}
+nJ_X=cbind(rownames(table(a_X$CUST_ID)),nJ_X)
+#c
+temp1=as.numeric(table(c$CUST_ID))
+temp2=cumsum(temp1)
+temp3=cumsum(c(1,temp1[-(length(temp1))]))
+nM=matrix(0,length(temp2),ncol(M))
+for (i in 1:length(temp2)) {
+  if(temp2[i]-temp3[i]>0){
+    nM[i,]=colSums(M[c(temp3[i]:temp2[i]),])
+  }else{
+    nM[i,]=M[c(temp3[i]:temp2[i]),]
+  }
+  
+}
+nM=cbind(rownames(table(c$CUST_ID)),nM)
+
+#split CUST into train and test---------
+temp=setdiff(e_1$CUST_ID,a_Y$CUST_ID)
+CUST_test=numeric(length(temp))
+ttemp=e_1$CUST_ID
+for (i in 1:length(CUST_test)) {
+  CUST_test[i]= which(ttemp==temp[i])
+}
+
+CUST_test_M=e_1[CUST_test,]
+CUST_train_M=e_1[-CUST_test,]
+#insert the newest data in train------
+temp=as.numeric(table(a_X$CUST_ID))
+temp=cumsum(temp)
+oldnew_train=a_X[temp,]
+oldnew_train=oldnew_train[,-c(4,22,23,33)]
+oldnew_train=oldnew_train[,-c(1:20)]
+oldnew_train$CURRENCY=as.character(oldnew_train$CURRENCY)
+oldnew_train$CURRENCY[which(oldnew_train$CURRENCY=="AUD")]=23
+oldnew_train$CURRENCY[which(oldnew_train$CURRENCY=="CNY")]=4.5
+oldnew_train$CURRENCY[which(oldnew_train$CURRENCY=="NTD")]=1
+oldnew_train$CURRENCY[which(oldnew_train$CURRENCY=="USD")]=30
+oldnew_train$CURRENCY=as.numeric(oldnew_train$CURRENCY)
+oldnew_train$MAIN_AMOUNT_UNIT[which(oldnew_train$MAIN_AMOUNT_UNIT==1)]=0
+oldnew_train$MAIN_AMOUNT_UNIT=10^(oldnew_train$MAIN_AMOUNT_UNIT)
+oldnew_train$MAIN_AMOUNT=oldnew_train$MAIN_AMOUNT*oldnew_train$MAIN_AMOUNT_UNIT
+oldnew_train$MAIN_AMOUNT=oldnew_train$MAIN_AMOUNT*oldnew_train$CURRENCY
+oldnew_train$MAIN_PREMIUM=oldnew_train$MAIN_PREMIUM*oldnew_train$CURRENCY
+oldnew_train=oldnew_train[,-c(1,3,5,6,7,8)]
+tt=oldnew_train$MAIN_SALE_CHANNEL
+temp=unclass(tt)
+rowname.t=rownames(table(temp))
+tempM=matrix(0,length(temp),length(rowname.t))
+for (i in 1:length(rowname.t)) {
+  tempM[which(temp==rowname.t[i]),i]=1
+}
+oldnew_train=cbind(oldnew_train[,c(1:2)],tempM)
+colnames(oldnew_train)[c(3:7)]=c("MAIN_SALE_CHANNEL_0","MAIN_SALE_CHANNEL_1","MAIN_SALE_CHANNEL_2","MAIN_SALE_CHANNEL_3","MAIN_SALE_CHANNEL_4")
+nJ_X=cbind(nJ_X,oldnew_train)
+#c
+temp=as.numeric(table(c$CUST_ID))
+temp=cumsum(temp)
+oldnew_test=c[temp,]
+oldnew_test=oldnew_test[,-c(4,22,23,33)]
+oldnew_test=oldnew_test[,-c(1:20)]
+oldnew_test$CURRENCY=as.character(oldnew_test$CURRENCY)
+oldnew_test$CURRENCY[which(oldnew_test$CURRENCY=="AUD")]=23
+oldnew_test$CURRENCY[which(oldnew_test$CURRENCY=="CNY")]=4.5
+oldnew_test$CURRENCY[which(oldnew_test$CURRENCY=="NTD")]=1
+oldnew_test$CURRENCY[which(oldnew_test$CURRENCY=="USD")]=30
+oldnew_test$CURRENCY=as.numeric(oldnew_test$CURRENCY)
+oldnew_test$MAIN_AMOUNT_UNIT[which(oldnew_test$MAIN_AMOUNT_UNIT==1)]=0
+oldnew_test$MAIN_AMOUNT_UNIT=10^(oldnew_test$MAIN_AMOUNT_UNIT)
+oldnew_test$MAIN_AMOUNT=oldnew_test$MAIN_AMOUNT*oldnew_test$MAIN_AMOUNT_UNIT
+oldnew_test$MAIN_AMOUNT=oldnew_test$MAIN_AMOUNT*oldnew_test$CURRENCY
+oldnew_test$MAIN_PREMIUM=oldnew_test$MAIN_PREMIUM*oldnew_test$CURRENCY
+oldnew_test=oldnew_test[,-c(1,3,5,6,7,8)]
+tt=oldnew_test$MAIN_SALE_CHANNEL
+temp=unclass(tt)
+rowname.t=c("0","1","2","3","4")
+tempM=matrix(0,length(temp),length(rowname.t))
+for (i in 1:length(rowname.t)) {
+  tempM[which(temp==rowname.t[i]),i]=1
+}
+oldnew_test=cbind(oldnew_test[,c(1:2)],tempM)
+colnames(oldnew_test)[c(3:7)]=c("MAIN_SALE_CHANNEL_0","MAIN_SALE_CHANNEL_1","MAIN_SALE_CHANNEL_2","MAIN_SALE_CHANNEL_3","MAIN_SALE_CHANNEL_4")
+nM=cbind(nM,oldnew_test)
+
+
+
+
+
+#construct final train----
+nJ_X=as.matrix(nJ_X)
+nJ_X=rbind(nJ_X,matrix(0,144436,25))
+nJ_X[,1]=a_Y$CUST_ID
+nJ_X=as.matrix(nJ_X)
+nJ_X=nJ_X[order(as.numeric(nJ_X[,1])),]
+colnames(nJ_X)[1:18]=c("CUST_ID",c(1:17))
+CUST_train_M=CUST_train_M[order(as.numeric(CUST_train_M$CUST_ID)),]
+a_Y=a_Y[order(a_Y$CUST_ID),]
+Final_train=cbind(a_Y[,c(4:21)],nJ_X[,-1],CUST_train_M)
+
+#change factor into numeric
+tempmat=matrix(0,nrow(Final_train),17)
+for(i in 1:17) tempmat[,i]=as.numeric(as.character((Final_train[,(18+i)])))
+Final_train[,c(19:35)]=tempmat
+tempmat=matrix(0,nrow(Final_train),3)
+for(i in 1:3) tempmat[,i]=as.numeric((Final_train[,(82+i)]))
+tempmat=tempmat-1
+Final_train[,c(83:85)]=tempmat
+#construct final test---------
+nM=as.matrix(nM)
+nM=rbind(nM,cbind(setdiff(CUST_test_M$CUST_ID,nM[,1]),matrix(0,3983,24)))
+nM=nM[order(as.numeric(nM[,1])),]
+CUST_test_M=CUST_test_M[order(as.numeric(CUST_test_M$CUST_ID)),]
+Final_test=cbind(nM[,-1],CUST_test_M)
+
+#change factor into numeric
+tempmat=matrix(0,nrow(Final_test),17)
+for(i in 1:17) tempmat[,i]=as.numeric(as.character((Final_test[,(i)])))
+Final_test[,c(1:17)]=tempmat
+tempmat=matrix(0,nrow(Final_test),3)
+for(i in 1:3) tempmat[,i]=as.numeric((Final_test[,(64+i)]))
+tempmat=tempmat-1
+Final_test[,c(65:67)]=tempmat
+#change colname-----
+#str(Final_train)
+#names(Final_train)
+colnames(Final_train) = c("CUST_ID", 
+                          "n.VA", "n.VL", "n.VUL", "n.death.insurance", "n.profit.change.annuity", 
+                          "n.cancer.prevention", "n.regular.insurance", "n.mortgage.life.insurance", 
+                          "n.long.term.care.insurance", "n.major.illness.insurance", "n.NA11", 
+                          "n.accident.insurance" , "n.deferred.annuity", "n.increase.inlife.insurance", 
+                          "n.pension.insurance", "n.still.life.insurance", 
+                          "n.medical.insurance",
+                          "VA", "VL", "VUL", "death.insurance", "profit.change.annuity", 
+                          "cancer.prevention", "regular.insurance", "mortgage.life.insurance", 
+                          "long.term.care.insurance", "major.illness.insurance", "NA11", 
+                          "accident.insurance" , "deferred.annuity", "increase.inlife.insurance", 
+                          "pension.insurance", "still.life.insurance", 
+                          "medical.insurance",
+                          "MAIN_AMOUNT"   ,     
+                          "MAIN_PREMIUM"   ,     "MAIN_SALE_CHANNEL_0",
+                          "MAIN_SALE_CHANNEL_1", "MAIN_SALE_CHANNEL_2",
+                          "MAIN_SALE_CHANNEL_3", "MAIN_SALE_CHANNEL_4",
+                          "POLICY_ID", 
+                          "BUY_MONTH", "BUY_YEAR", "CUST_ID","DISEASE", "MARRIAGE_1","MARRIAGE_2","MARRIAGE_3","MARRIAGE_4", "SMOKES", "ARCEA",
+                          "LIQUEUR", "VETERAN_STATUS", "EDU_1","EDU_2","EDU_4", "CAR_1","CAR_2","CAR_3","CAR_4","CAR_5","CAR_6","CAR_7","CAR_8","CAR_9","CAR_10","CAR_11","CAR_12","CAR_13","CAR_14","CAR_15","CAR_16","CAR_17","CAR_18","CAR_19","CAR_20","CAR_21","CAR_22", "NOW_INCOME", "NOW_CHILD",
+                          "PARENTS_DEAD", "REAL_ESTATE_HAVE", "IS_MAJOR_INCOME", "AGE", "SEX")
+colnames(Final_test)=c("VA", "VL", "VUL", "death.insurance", "profit.change.annuity", 
+                       "cancer.prevention", "regular.insurance", "mortgage.life.insurance", 
+                       "long.term.care.insurance", "major.illness.insurance", "NA11", 
+                       "accident.insurance" , "deferred.annuity", "increase.inlife.insurance", 
+                       "pension.insurance", "still.life.insurance", 
+                       "medical.insurance",
+                       "MAIN_AMOUNT"   ,     
+                       "MAIN_PREMIUM"   ,     "MAIN_SALE_CHANNEL_0",
+                       "MAIN_SALE_CHANNEL_1", "MAIN_SALE_CHANNEL_2",
+                       "MAIN_SALE_CHANNEL_3", "MAIN_SALE_CHANNEL_4",
+                       "POLICY_ID", 
+                       "BUY_MONTH", "BUY_YEAR", "CUST_ID","DISEASE", "MARRIAGE_1","MARRIAGE_2","MARRIAGE_3","MARRIAGE_4", "SMOKES", "ARCEA",
+                       "LIQUEUR", "VETERAN_STATUS", "EDU_1","EDU_2","EDU_4", "CAR_1","CAR_2","CAR_3","CAR_4","CAR_5","CAR_6","CAR_7","CAR_8","CAR_9","CAR_10","CAR_11","CAR_12","CAR_13","CAR_14","CAR_15","CAR_16","CAR_17","CAR_18","CAR_19","CAR_20","CAR_21","CAR_22", "NOW_INCOME", "NOW_CHILD",
+                       "PARENTS_DEAD", "REAL_ESTATE_HAVE", "IS_MAJOR_INCOME", "AGE", "SEX")
+
+#delete non-sense variable-----
+#delete type11
+Final_train = Final_train[,-c(12, 29)]
+Final_test = Final_test[,-11]
+#delete custID
+Final_train = Final_train[,-c(44)]
+Final_test = Final_test[,-27]
+#change n.Y(dummy variable) into number and n.buytype into big--------
+n.Y.data = Final_train[,c(2:17)]
+
+n.Y.data[ ,2] = n.Y.data[ ,2]*2
+n.Y.data[ ,3] = n.Y.data[ ,3]*3
+n.Y.data[ ,4] = n.Y.data[ ,4]*4
+n.Y.data[ ,5] = n.Y.data[ ,5]*5
+n.Y.data[ ,6] = n.Y.data[ ,6]*6
+n.Y.data[ ,7] = n.Y.data[ ,7]*7
+n.Y.data[ ,8] = n.Y.data[ ,8]*8
+n.Y.data[ ,9] = n.Y.data[ ,9]*9
+n.Y.data[ ,10] = n.Y.data[ ,10]*10
+n.Y.data[ ,11] = n.Y.data[ ,11]*12
+n.Y.data[ ,12] = n.Y.data[ ,12]*13
+n.Y.data[ ,13] = n.Y.data[ ,13]*14
+n.Y.data[ ,14] = n.Y.data[ ,14]*15
+n.Y.data[ ,15] = n.Y.data[ ,15]*16
+n.Y.data[ ,16] = n.Y.data[ ,16]*17
+#change dataframe into matrix
+n.Y.data1.0 = as.matrix(n.Y.data)
+n.buytype = n.Y.data1.0[,1]+ n.Y.data1.0[,2]+ n.Y.data1.0[,3]+ n.Y.data1.0[,4]+
+  n.Y.data1.0[,5]+ n.Y.data1.0[,6]+ n.Y.data1.0[,7]+ n.Y.data1.0[,8]+
+  n.Y.data1.0[,9]+ n.Y.data1.0[,10]+ n.Y.data1.0[,11]+ n.Y.data1.0[,12]+
+  n.Y.data1.0[,13]+ n.Y.data1.0[,14]+ n.Y.data1.0[,15]+ n.Y.data1.0[,16]
+
+#delete n.y & plus n.buytype
+Final_train = Final_train[,-c(2:17)]
+Final_train = data.frame(n.buytype, Final_train)
+
+Final_train[,1]=as.factor(Final_train[,1])
+Final_train[,1]=as.numeric(as.character(Final_train[,1]))
+
+for(i in 19:25) Final_train[,i]=as.numeric(as.character(Final_train[,i]))
+for(i in 17:23) Final_test[,i]=as.numeric(as.character(Final_test[,i]))
+
+# temp=numeric(length(Final_train[,1]))
+# 
+# temp[which(Final_train[,1]==1)]="a"
+# temp[which(Final_train[,1]==2)]="b"
+# temp[which(Final_train[,1]==3)]="c"
+# temp[which(Final_train[,1]==4)]="d"
+# temp[which(Final_train[,1]==6)]="e"
+# temp[which(Final_train[,1]==7)]="f"
+# temp[which(Final_train[,1]==8)]="g"
+# temp[which(Final_train[,1]==9)]="h"
+# temp[which(Final_train[,1]==10)]="i"
+# temp[which(Final_train[,1]==12)]="j"
+# temp[which(Final_train[,1]==13)]="k"
+# temp[which(Final_train[,1]==14)]="l"
+# temp[which(Final_train[,1]==15)]="m"
+# temp[which(Final_train[,1]==16)]="n"
+# temp[which(Final_train[,1]==17)]="o"
+# Final_train[,1]=temp
+
+# temp=matrix(0,nrow(Final_train),7)
+# temp[,1]=rowSums(Final_train[,c(3,4,7,14,15,16,17)])
+# temp[,2]=rowSums(Final_train[,c(5,6,9,10)])
+# temp[,3]=(Final_train[,8])
+# temp[,4]=(Final_train[,11])
+# temp[,5]=(Final_train[,12])
+# temp[,6]=(Final_train[,18])
+# temp[,7]=(Final_train[,13])
+# 
+# Final_train=Final_train[,-c(3:18)]
+# Final_train=cbind(Final_train[,c(1,2)],temp,Final_train[,-c(1,2)])
+# colnames(Final_train)[c(3:9)]=c("Buy_Type1","Buy_Type2","Buy_Type3","Buy_Type4","Buy_Type5","Buy_Type6","Buy_Type7")
+# Final_train$n.buytype=bigc(Final_train$n.buytype)
+# Final_train=Final_train[,-10]
+
+#cross(remaning)
+# temp=matrix(0,nrow(Final_train),210)
+# temp_colname=c(1:210)
+# k=1
+# for(i in 10:24){
+#   temp_ind=setdiff(c(10:24),i)
+#   iname=colnames(Final_train)[i]
+#   for(j in temp_ind){
+#     jname=colnames(Final_train)[j]
+#     if(is.data.frame(Final_train[i]*Final_train[j])) temp[,k]= (Final_train[i]*Final_train[j])[,1]
+#     else temp[,k]= (Final_train[i]*Final_train[j])
+#     temp_colname[k]=paste(iname,jname,sep="")
+# 
+#     k=k+1
+#   }
+# }
+# colnames(temp)=temp_colname
+# Final_train=cbind(Final_train,temp)
+
+#split------------------------------------------
+set.seed(159753456)
+split_1=matrix(0,0,37)
+split_1_ind=c()
+split_2=matrix(0,0,37)
+split_2_ind=c()
+split_3=matrix(0,0,37)
+split_3_ind=c()
+split_4=matrix(0,0,37)
+split_4_ind=c()
+split_5=matrix(0,0,37)
+split_5_ind=c()
+split_6=matrix(0,0,37)
+split_6_ind=c()
+split_7=matrix(0,0,37)
+split_7_ind=c()
+split_8=matrix(0,0,37)
+split_8_ind=c()
+split_9=matrix(0,0,37)
+split_9_ind=c()
+split_10=matrix(0,0,37)
+split_10_ind=c()
+
+
+
+wtf=c("a","b","c","d","e","f","g","h","i","j","k","l","m","n","o")
+for(i in 1:17){
+  temp1=which(Final_train$n.buytype==i)
+  tcount=round(length(temp1)/10)
+  temp2=sample(1:length(temp1),tcount,replace=F)
+  split_1_ind=c(split_1_ind,temp1[temp2])
+  temp1=temp1[-temp2]
+  
+  temp2=sample(1:length(temp1),tcount,replace=F)
+  split_2_ind=c(split_2_ind,temp1[temp2])
+  temp1=temp1[-temp2]
+  
+  temp2=sample(1:length(temp1),tcount,replace=F)
+  split_3_ind=c(split_3_ind,temp1[temp2])
+  temp1=temp1[-temp2]
+  
+  temp2=sample(1:length(temp1),tcount,replace=F)
+  split_4_ind=c(split_4_ind,temp1[temp2])
+  temp1=temp1[-temp2]
+  
+  temp2=sample(1:length(temp1),tcount,replace=F)
+  split_5_ind=c(split_5_ind,temp1[temp2])
+  temp1=temp1[-temp2]
+  
+  temp2=sample(1:length(temp1),tcount,replace=F)
+  split_6_ind=c(split_6_ind,temp1[temp2])
+  temp1=temp1[-temp2]
+  
+  temp2=sample(1:length(temp1),tcount,replace=F)
+  split_7_ind=c(split_7_ind,temp1[temp2])
+  temp1=temp1[-temp2]
+  
+  temp2=sample(1:length(temp1),tcount,replace=F)
+  split_8_ind=c(split_8_ind,temp1[temp2])
+  temp1=temp1[-temp2]
+  
+  temp2=sample(1:length(temp1),tcount,replace=F)
+  split_9_ind=c(split_9_ind,temp1[temp2])
+  temp1=temp1[-temp2]
+  
+  split_10_ind=c(split_10_ind,temp1)
+  
+}
+
+split_1=Final_train[split_1_ind,]
+split_2=Final_train[split_2_ind,]
+split_3=Final_train[split_3_ind,]
+split_4=Final_train[split_4_ind,]
+split_5=Final_train[split_5_ind,]
+split_6=Final_train[split_6_ind,]
+split_7=Final_train[split_7_ind,]
+split_8=Final_train[split_8_ind,]
+split_9=Final_train[split_9_ind,]
+split_10=Final_train[split_10_ind,]
+nrow(split_1)+nrow(split_2)+nrow(split_3)+nrow(split_4)+nrow(split_5)+nrow(split_6)+nrow(split_7)+nrow(split_8)+nrow(split_9)+nrow(split_10)
+big_split=list(
+  split_1,
+  split_2,
+  split_3,
+  split_4,
+  split_5,
+  split_6,
+  split_7,
+  split_8,
+  split_9,
+  split_10
+)
+
+
+
+
+
+#ADD-----------------
+#change buy type into dummy add---------
+tt=b$ADD_PRODUCT_TYPE
+temp=unclass(tt)
+J_add=matrix(0,length(temp),6)
+for (i in 1:6) {
+  
+  J_add[which(temp==(c(6,7,9,10,12,17)[i])),i]=1
+}
+J_add=cbind(rowSums(J_add[,1:4]),J_add[,6],J_add[,5])
+b=cbind(b[,c(1:4)],J_add,b[,c(6:13)])
+colnames(b)[5:7]=c("Type1","Type2","Type3")
+#c
+tt=d$ADD_PRODUCT_TYPE
+temp=unclass(tt)
+M_add=matrix(0,length(temp),6)
+for (i in 1:6) {
+  
+  M_add[which(temp==(c(6,7,9,10,12,17)[i])),i]=1
+}
+M_add=cbind(rowSums(M_add[,1:4]),M_add[,6],M_add[,5])
+d=cbind(d[,c(1:4)],M_add,d[,c(6:13)])
+colnames(d)[5:7]=c("Type1","Type2","Type3")
+
+#split add_train X and Y---------
+temp=a_Y$POLICY_ID
+temp2=b$POLICY_ID
+temp3=intersect(temp,temp2)
+b_Y_ind=c()
+for(i in 1:length(temp3)){
+  b_Y_ind=c(b_Y_ind,which(temp2==temp3[i]))
+}  
+b_Y=b[b_Y_ind,]
+b_X=b[-b_Y_ind,]
+
+#based on cust data split add_train X-----------
+b_X=b_X[order(b_X$CUST_ID),]
+temp1=as.numeric(table(b_X$CUST_ID))
+temp2=cumsum(temp1)
+temp3=cumsum(c(1,temp1[-(length(temp1))]))
+j=0
+nJ_X_add=matrix(0,length(temp2),ncol(J_add))
+for (i in 1:length(temp2)) {
+  if(temp2[i]-temp3[i]>0){
+    nJ_X_add[i,]=as.numeric(colSums(b_X[c(temp3[i]:temp2[i]),5:7]))
+  }else{
+    nJ_X_add[i,]=as.numeric(b_X[c(temp3[i]:temp2[i]),5:7])
+  }
+  
+}
+#c
+d=d[order(d$CUST_ID),]
+temp1=as.numeric(table(d$CUST_ID))
+temp2=cumsum(temp1)
+temp3=cumsum(c(1,temp1[-(length(temp1))]))
+nM_add=matrix(0,length(temp2),ncol(M_add))
+for (i in 1:length(temp2)) {
+  if(temp2[i]-temp3[i]>0){
+    nM_add[i,]=as.numeric(colSums(d[c(temp3[i]:temp2[i]),5:7]))
+  }else{
+    nM_add[i,]=as.numeric(d[c(temp3[i]:temp2[i]),5:7])
+  }
+  
+}
+
+
+#based on cust data split add_train Y---------
+b_Y=b_Y[order(b_Y$CUST_ID),]
+temp1=as.numeric(table(b_Y$CUST_ID))
+temp2=cumsum(temp1)
+temp3=cumsum(c(1,temp1[-(length(temp1))]))
+j=0
+nJ_Y_add=matrix(0,length(temp2),ncol(J_add))
+for (i in 1:length(temp2)) {
+  if(temp2[i]-temp3[i]>0){
+    nJ_Y_add[i,]=as.numeric(colSums(b_Y[c(temp3[i]:temp2[i]),5:7]))
+  }else{
+    nJ_Y_add[i,]=as.numeric(b_Y[c(temp3[i]:temp2[i]),5:7])
+  }
+  
+}
+
+
+# change state about type1 2 3 into 8variable------------
+add_transformation=list(
+    c(1,0,0),
+    c(0,1,0),
+    c(0,0,1),
+    c(1,1,0),
+    c(1,0,1),
+    c(0,1,1),
+    c(1,1,1),
+    c(0,0,0)
+)
+
+
+nJ_Y_add=sign(nJ_Y_add)
+nJ_Y_add_ind=numeric(nrow(nJ_Y_add))
+for (i in 1:8) {
+  for (j in 1:nrow(nJ_Y_add)) {
+    if(identical(nJ_Y_add[j,],add_transformation[[i]])) nJ_Y_add_ind[j]=i
+  }
+}
+nJ_Y_add=nJ_Y_add_ind
+# nJ_X_add=sign(nJ_X_add)
+# nJ_X_add_ind=numeric(nrow(nJ_X_add))
+# for (i in 1:8) {
+#   for (j in 1:nrow(nJ_X_add)) {
+#     if(identical(nJ_X_add[j,],add_transformation[[i]])) nJ_X_add_ind[j]=i
+#   }
+# }
+#construct final train add--------------
+nJ_Y_add=cbind(rownames(table(b_Y$CUST_ID)),nJ_Y_add)
+nJ_Y_add=rbind(nJ_Y_add,cbind(setdiff(Final_train$CUST_ID,nJ_Y_add[,1]),8))
+nJ_X_add=cbind(rownames(table(b_X$CUST_ID)),nJ_X_add)
+nJ_X_add=rbind(nJ_X_add,cbind(setdiff(nJ_Y_add[,1],nJ_X_add[,1]),matrix(0,length(setdiff(nJ_Y_add[,1],nJ_X_add[,1])),3)))
+nJ_Y_add=nJ_Y_add[order(as.numeric(nJ_Y_add[,1])),]
+
+nJ_X_add=nJ_X_add[order(as.numeric(nJ_X_add[,1])),]
+
+
+
+Final_train_add=cbind(nJ_Y_add[,2],nJ_X_add,Final_train[,3:69])
+colnames(Final_train_add)[1:5]=c("n.buytype","CUST_ID","type1","type2","type3")
+for(i in 1:5) Final_train_add[,i]=as.numeric(as.character(Final_train_add[,i]))
+#construct final test add--------------
+nM_add=cbind(rownames(table(d$CUST_ID)),nM_add)
+nM_add=rbind(nM_add,cbind(setdiff(nM[,1],nM_add[,1]),matrix(0,length(setdiff(nM[,1],nM_add[,1])),3)))
+nM_add=nM_add[order(as.numeric(nM_add[,1])),]
+
+
+
+Final_test_add=cbind(nM_add,Final_test)
+colnames(Final_test_add)[1:4]=c("CUST_ID","type1","type2","type3")
+for(i in 1:4) Final_test_add[,i]=as.numeric(as.character(Final_test_add[,i]))
+
+#split--------------
+split_1=matrix(0,0,37)
+split_1_ind=c()
+split_2=matrix(0,0,37)
+split_2_ind=c()
+split_3=matrix(0,0,37)
+split_3_ind=c()
+split_4=matrix(0,0,37)
+split_4_ind=c()
+split_5=matrix(0,0,37)
+split_5_ind=c()
+split_6=matrix(0,0,37)
+split_6_ind=c()
+split_7=matrix(0,0,37)
+split_7_ind=c()
+split_8=matrix(0,0,37)
+split_8_ind=c()
+split_9=matrix(0,0,37)
+split_9_ind=c()
+split_10=matrix(0,0,37)
+split_10_ind=c()
+
+
+for(i in 1:8){
+  temp1=which(Final_train_add$n.buytype==i)
+  tcount=round(length(temp1)/10)
+  temp2=sample(1:length(temp1),tcount,replace=F)
+  split_1_ind=c(split_1_ind,temp1[temp2])
+  temp1=temp1[-temp2]
+  
+  temp2=sample(1:length(temp1),tcount,replace=F)
+  split_2_ind=c(split_2_ind,temp1[temp2])
+  temp1=temp1[-temp2]
+  
+  temp2=sample(1:length(temp1),tcount,replace=F)
+  split_3_ind=c(split_3_ind,temp1[temp2])
+  temp1=temp1[-temp2]
+  
+  temp2=sample(1:length(temp1),tcount,replace=F)
+  split_4_ind=c(split_4_ind,temp1[temp2])
+  temp1=temp1[-temp2]
+  
+  temp2=sample(1:length(temp1),tcount,replace=F)
+  split_5_ind=c(split_5_ind,temp1[temp2])
+  temp1=temp1[-temp2]
+  
+  temp2=sample(1:length(temp1),tcount,replace=F)
+  split_6_ind=c(split_6_ind,temp1[temp2])
+  temp1=temp1[-temp2]
+  
+  temp2=sample(1:length(temp1),tcount,replace=F)
+  split_7_ind=c(split_7_ind,temp1[temp2])
+  temp1=temp1[-temp2]
+  
+  temp2=sample(1:length(temp1),tcount,replace=F)
+  split_8_ind=c(split_8_ind,temp1[temp2])
+  temp1=temp1[-temp2]
+  
+  temp2=sample(1:length(temp1),tcount,replace=F)
+  split_9_ind=c(split_9_ind,temp1[temp2])
+  temp1=temp1[-temp2]
+  
+  split_10_ind=c(split_10_ind,temp1)
+  
+}
+split_1=Final_train_add[split_1_ind,]
+split_2=Final_train_add[split_2_ind,]
+split_3=Final_train_add[split_3_ind,]
+split_4=Final_train_add[split_4_ind,]
+split_5=Final_train_add[split_5_ind,]
+split_6=Final_train_add[split_6_ind,]
+split_7=Final_train_add[split_7_ind,]
+split_8=Final_train_add[split_8_ind,]
+split_9=Final_train_add[split_9_ind,]
+split_10=Final_train_add[split_10_ind,]
+
+nrow(split_1)+nrow(split_2)+nrow(split_3)+nrow(split_4)+nrow(split_5)+nrow(split_6)+nrow(split_7)+nrow(split_8)+nrow(split_9)+nrow(split_10)
+big_split=list(
+  split_1,
+  split_2,
+  split_3,
+  split_4,
+  split_5,
+  split_6,
+  split_7,
+  split_8,
+  split_9,
+  split_10
+)
+
+
+
+##################################################################
+library(xgboost)
+library(Matrix)
+#original------
+
+table(Final_train$n.buytype)
+table(train.xgboost.database1_1.0$n.buytype)
+#data cbind
+train.xgboost.database1_1.0 = rbind(split_2, split_3, split_4, split_5, 
+                                   split_6, split_7,split_8,split_9, split_10)
+test.xgboost.database1_1.0 = split_1
+
+str(train.xgboost.database1_1.0)
+
+#convert all feature variables to a sparse matri+x
+train.xgboost.database1_2.0 = sparse.model.matrix(train.xgboost.database1_1.0$n.buytype~.-1,
+                                      data = train.xgboost.database1_1.0[-2], 
+                                      drop.unused.levels = F)
+
+#number of categories in response variable
+m = nlevels(as.factor(train.xgboost.database1_1.0$n.buytyp)) ;m
+#change Y into 0~7, it must start in 0
+#recode Y as 0,1,2,...,m-1
+Y = as.integer(as.factor(train.xgboost.database1_1.0$n.buytype)) - 1
+
+#xgboost parameters setup
+param = list("objective" = "multi:softprob","eval_metric" = "merror","num_class" = m)
+
+#build the model
+result = xgboost(param = param, data = train.xgboost.database1_2.0, label = Y, nrounds = 20); result
+
+
+
+#get prediction
+#convert all feature variables to a sparse matri+x
+test.xgboost.database1_2.0 = sparse.model.matrix(test.xgboost.database1_1.0$n.buytype~.-1,
+                                                  data = test.xgboost.database1_1.0[-2], 
+                                                 drop.unused.levels = F)
+
+Ypred = predict(result, test.xgboost.database1_2.0 ) 
+Ypred = t(matrix(Ypred, m, length(Ypred)/m))
+
+#output the prediction data
+
+
+#colnames(Ypred) = levels()
+Ypred = levels(as.factor(train.xgboost.database1_1.0$n.buytype))[max.col(Ypred)]
+
+
+#confusion matrix   ###################3
+cm.xgboost = table(test.xgboost.database1_1.0$n.buytype, Ypred, dnn = c("Real", "Predict")) ;cm.xgboost
+
+#accuracy
+accuracy.xgboost = sum(diag(cm.xgboost))/sum(cm.xgboost) ;accuracy.xgboost
+
+#importance variable
+imp = xgb.importance(model = result)
+windows()
+print(imp)
+
+xgb.plot.importance(imp,measure = "Cover")
+xgb.plot.importance(imp,measure = "Gain")
+xgb.plot.importance(imp,measure = "Frequency")
+xgb.plot.importance(imp)
+
+
+#original------
+
+#construct final main report----------
+n=10
+xgpredict<-function(dtrain,dtest,param,n){
+  train.xgboost.database1_1.0 = dtrain
+  test.xgboost.database1_1.0 = dtest
+  train.xgboost.database1_2.0 = sparse.model.matrix(train.xgboost.database1_1.0$n.buytype~.-1,
+                                                    data = train.xgboost.database1_1.0[-2], 
+                                                    drop.unused.levels = F)
+  #number of categories in response variable
+  m = nlevels(as.factor(train.xgboost.database1_1.0$n.buytyp)) 
+  #change Y into 0~7, it must start in 0
+  #recode Y as 0,1,2,...,m-1
+  Y = as.integer(as.factor(train.xgboost.database1_1.0$n.buytype)) - 1
+  result = xgboost(param = param, data = train.xgboost.database1_2.0, label = Y, nrounds = n)
+  
+  
+  
+  #get prediction
+  test.xgboost.database1_2.0 = sparse.model.matrix(test.xgboost.database1_1.0$n.buytype~.-1,
+                                                   data = test.xgboost.database1_1.0[-2], 
+                                                   drop.unused.levels = F)
+  Ypred = predict(result, test.xgboost.database1_2.0 ) 
+  Ypred = t(matrix(Ypred, m, length(Ypred)/m))
+  
+  
+  #colnames(Ypred) = levels()
+  sum_prob=matrix(0,nrow(dtest),7)
+  ind=list(
+    c(1,2,11,12,13),
+    c(3,4,6,7),
+    5,
+    8,
+    9,
+    14,
+    10
+  )
+  for(k in 1:2){
+    sum_prob[,k]=rowSums(Ypred[,ind[[k]]])
+  }
+  for(k in 3:7){
+    sum_prob[,k]=Ypred[,ind[[k]]]
+  }
+  Ypred=sum_prob
+  Ypred = max.col(Ypred)
+  
+  
+  #confusion matrix   ###################
+  cm.xgboost=table(c(small_to_big(test.xgboost.database1_1.0$n.buytype),c(1:7)),c(Ypred,c(1:7)) , dnn = c("Real", "Predict"))
+  cm.xgboost=cm.xgboost-diag(7)
+  print(cm.xgboost)
+  
+  #accuracy
+  print(sum(diag(cm.xgboost))/sum(cm.xgboost))
+  
+}
+param = list("objective" = "multi:softprob","eval_metric" = "merror","num_class" = 14)
+for (i in 1:10) {
+  temp=c(1:10)[-i]
+  dtrain=(big_split[[temp[1]]])
+  for (j in 2:9) {
+    dtrain=rbind(dtrain,(big_split[[temp[j]]]))
+  }
+  dtest=(big_split[[i]])
+  print(i)
+  xgpredict(dtrain,dtest,param,10)
+}
+
+#construct final add report----------
+n=10
+add_transformation=list(
+  c(1,0,0),
+  c(0,1,0),
+  c(0,0,1),
+  c(1,1,0),
+  c(1,0,1),
+  c(0,1,1),
+  c(1,1,1),
+  c(0,0,0)
+)
+eight_to_three_dummy=function(a){
+  return((add_transformation[[a]]))
+}
+
+xgpredict_add<-function(dtrain,dtest,param,n){
+  train.xgboost.database1_1.0 = dtrain
+  test.xgboost.database1_1.0 = dtest
+  train.xgboost.database1_2.0 = sparse.model.matrix(train.xgboost.database1_1.0$n.buytype~.-1,
+                                                    data = train.xgboost.database1_1.0[-2], 
+                                                    drop.unused.levels = F)
+  #number of categories in response variable
+  Y = as.integer(as.factor(train.xgboost.database1_1.0$n.buytype)) - 1
+  m = nlevels(as.factor(train.xgboost.database1_1.0$n.buytyp)) 
+  
+  
+  result = xgboost(param = param, data = train.xgboost.database1_2.0, label = Y, nrounds = n)
+  
+  #get prediction
+  test.xgboost.database1_2.0 = sparse.model.matrix(test.xgboost.database1_1.0$n.buytype~.-1,
+                                                   data = test.xgboost.database1_1.0[-2], 
+                                                   drop.unused.levels = F)
+  Ypred = predict(result, test.xgboost.database1_2.0 ) 
+  Ypred = t(matrix(Ypred, m, length(Ypred)/m))
+  Ypred =max.col(Ypred)
+  
+  #accuracy
+  change_matrix_pred=matrix(0,length(Ypred),3)
+  for (i in 1:8) {
+    temp=which(Ypred==i)
+    if(length(temp)!=0){
+      for(j in 1:length(temp)){
+        change_matrix_pred[temp[j],]=eight_to_three_dummy(i)
+      } 
+    }
+  }
+  change_matrix_true=matrix(0,length(test.xgboost.database1_1.0$n.buytype),3)
+  for (i in 1:8) {
+    temp=which(Ypred==i)
+    if(length(temp)!=0){
+      for(j in 1:length(temp)){
+        change_matrix_true[temp[j],]=eight_to_three_dummy(i)
+      } 
+    }
+  }
+  a=sum(change_matrix_pred*change_matrix_true)/sum(change_matrix_true)
+  change_matrix_pred=-change_matrix_pred+1
+  change_matrix_true=-change_matrix_true+1
+  b=sum(change_matrix_pred*change_matrix_true)/sum(change_matrix_true)
+  
+  print(((a+b)/2))
+
+}
+param = list("objective" = "multi:softprob","eval_metric" = "merror","num_class" = 8)
+for (i in 1:10) {
+  temp=c(1:10)[-i]
+  dtrain=(big_split[[temp[1]]])
+  for (j in 2:9) {
+    dtrain=rbind(dtrain,(big_split[[temp[j]]]))
+  }
+  dtest=(big_split[[i]])
+  print(i)
+  xgpredict_add(dtrain,dtest,param,10)
+}
+
+
+
+
+
+
+
+
+
+
+
+#iteration adding features---------------------------------
+bestper=0.579
+ndata=train.xgboost.database1_1.0[,c(1,3,5,8,11,12,13,17,18,25,26)]
+rest=setdiff(c(1:26),c(2,10,3,5,8,11,12,13,17,18,25,26))
+for (i in rest){
+  ndata=cbind(ndata,train.xgboost.database1_1.0[,i])
+  colnames(ndata)[ncol(ndata)]=colnames(train.xgboost.database1_1.0)[i]
+  train.xgboost.database1_2.0 = sparse.model.matrix(ndata$n.buytype~.-1,
+                                                    data = ndata, 
+                                                    drop.unused.levels = F)
+  
+  m = nlevels(as.factor(train.xgboost.database1_1.0$n.buytyp)) 
+  Y = as.integer(as.factor(train.xgboost.database1_1.0$n.buytype)) - 1
+  param = list("objective" = "multi:softprob","eval_metric" = "merror","num_class" = m)
+  
+  result = xgboost(param = param, data = train.xgboost.database1_2.0, label = Y, nrounds = 20); result
+  imp = xgb.importance(model = result)
+  
+  if(bestper<(1-result$evaluation_log[20,2])){
+    bestper=(1-result$evaluation_log[20,2])
+  }else{
+      ndata=ndata[,-ncol(ndata)]
+    }
+}
+#iteration adding features
+##########################################################################################
+train.xgboost.database1_1.0 = Final_train
+test.xgboost.database1_1.0 = cbind(numeric(nrow(Final_test)),Final_test)
+colnames(test.xgboost.database1_1.0)[1]="n.buytype"
+train.xgboost.database1_2.0 = sparse.model.matrix(train.xgboost.database1_1.0$n.buytype~.-1,
+                                                  data = train.xgboost.database1_1.0[-2], 
+                                                  drop.unused.levels = F)
+#number of categories in response variable
+m = nlevels(as.factor(train.xgboost.database1_1.0$n.buytype)) 
+#change Y into 0~7, it must start in 0
+#recode Y as 0,1,2,...,m-1
+Y = as.integer(as.factor(train.xgboost.database1_1.0$n.buytype)) - 1
+param = list("objective" = "multi:softprob","eval_metric" = "merror","num_class" = 14)
+result = xgboost(param = param, data = train.xgboost.database1_2.0, label = Y, nrounds = n)
+
+
+
+#get prediction
+test.xgboost.database1_2.0 = sparse.model.matrix(test.xgboost.database1_1.0$n.buytype~.-1,
+                                                 data = test.xgboost.database1_1.0, 
+                                                 drop.unused.levels = F)
+Ypred = predict(result, test.xgboost.database1_2.0 ) 
+Ypred = t(matrix(Ypred, m, length(Ypred)/m))
+
+
+#colnames(Ypred) = levels()
+sum_prob=matrix(0,nrow(Final_test),7)
+ind=list(
+  c(1,2,11,12,13),
+  c(3,4,6,7),
+  5,
+  8,
+  9,
+  14,
+  10
+)
+for(k in 1:2){
+  sum_prob[,k]=rowSums(Ypred[,ind[[k]]])
+}
+for(k in 3:7){
+  sum_prob[,k]=Ypred[,ind[[k]]]
+}
+Ypred=sum_prob
+Ypred = max.col(Ypred)
+
+setwd("C:\\Users\\CathayBigdata2018_14\\Desktop\\許劭廷")
+write.table(cbind(nM[,1],Ypred),"final_main.csv")
+
+add_transformation=list(
+  c(1,0,0),
+  c(0,1,0),
+  c(0,0,1),
+  c(1,1,0),
+  c(1,0,1),
+  c(0,1,1),
+  c(1,1,1),
+  c(0,0,0)
+)
+eight_to_three_dummy=function(a){
+  return((add_transformation[[a]]))
+}
+
+  train.xgboost.database1_1.0 = Final_train_add
+  test.xgboost.database1_1.0 = cbind(numeric(nrow(Final_test_add)),Final_test_add)
+  colnames(test.xgboost.database1_1.0)[1]="n.buytype"
+  
+  
+  train.xgboost.database1_2.0 = sparse.model.matrix(train.xgboost.database1_1.0$n.buytype~.-1,
+                                                    data = train.xgboost.database1_1.0[-2], 
+                                                    drop.unused.levels = F)
+  #number of categories in response variable
+  Y = as.integer(as.factor(train.xgboost.database1_1.0$n.buytype)) - 1
+  m = nlevels(as.factor(train.xgboost.database1_1.0$n.buytype)) 
+  param = list("objective" = "multi:softprob","eval_metric" = "merror","num_class" = 8)
+  result = xgboost(param = param, data = train.xgboost.database1_2.0, label = Y, nrounds = n)
+  
+  #get prediction
+  test.xgboost.database1_2.0 = sparse.model.matrix(test.xgboost.database1_1.0$n.buytype~.-1,
+                                                   data = test.xgboost.database1_1.0[-2], 
+                                                   drop.unused.levels = F)
+  Ypred = predict(result, test.xgboost.database1_2.0 ) 
+  Ypred = t(matrix(Ypred, m, length(Ypred)/m))
+  Ypred = max.col(Ypred)
+  
+  #accuracy
+  change_matrix_pred=matrix(0,length(Ypred),3)
+  for (i in 1:8) {
+    temp=which(Ypred==i)
+    if(length(temp)!=0){
+      for(j in 1:length(temp)){
+      change_matrix_pred[temp[j],]=eight_to_three_dummy(i)
+    } 
+    }
+  }
+  
+  write.table(cbind(Final_test_add$CUST_ID,change_matrix_pred),"final_add.csv")
+  
+  #####################################################################################################################
+
+
+#see feature who has NA and see the effect about whether it's NA-------- 
+# for(i in 1:ncol(e)){
+#   print(i*(length(which(is.na(e[,i])))!=0))
+# }
+temp=c(5:10,12:24)
+for(i in temp){
+  sso=table((Final_train$n.buytype))
+  ss=table((Final_train$n.buytype[which(!is.na(e[,i]))]))
+  plot(x=c(1,2,3,4,6,7,8,9,10,12,14,15,16,17),y=(as.numeric(ss/sum(ss))/as.numeric(sso/sum(sso))),main = colnames(e)[i])
+}
+#see difference about disease1~4-------
+length(which(which(is.na(e[,9]))!=which(is.na(e[,10]))))
+
+#true Ypred ---------
+Ypred = predict(result, test.xgboost.database1_2.0 ) 
+Ypred = t(matrix(Ypred, m, length(Ypred)/m))
+sum_prob=matrix(0,nrow(split_1),7)
+ind=list(
+  c(1,2,11,12,13),
+  c(3,4,6,7),
+  5,
+  8,
+  9,
+  14,
+  10
+)
+for(i in 1:2){
+  sum_prob[,i]=rowSums(Ypred[,ind[[i]]])
+}
+for(i in 3:7){
+  sum_prob[,i]=Ypred[,ind[[i]]]
+}
+
+a[,]
+
+j=1
+
+ind=list(
+  c(1,5,13,15,2,14,16),
+  c(3,4,7,8),
+  6,
+  9,
+  10,
+  17,
+  12
+)
+pseudo_PRODUCT_TYPE=numeric(nrow(a))
+for(i in 1:7){
+  pseudo_PRODUCT_TYPE[which(a$PRODUCT_TYPE%in%ind[[i]])]=i
+}
+
+
+for (j in 1:12) {
+  outd=numeric(17)
+  for(i in 1:17){
+    outd[i]=length(intersect(which(a$PRODUCT_TYPE==i),which(a$BUY_MONTH==j)))/length(which(a$PRODUCT_TYPE==i))
+  }
+  outd=outd*nrow(a)/length(which(a$BUY_MONTH==j))
+  # plot(outd,xlim=c(0,18),ylim = c(0,2.4),xlab = "product type",ylab="rate",main = "Jan",pch=19)
+  # for(k in 1:17) text(k,(outd[k]-.2),k)
+  # abline(h=1)
+  rec_M[2,(j+1)]=which.max(outd)
+  rec_M[3,(j+1)]=which.min(outd)
+}
+
+rec_M=matrix(0,3,13)
+rec_M=rec_M[2:3,2:13]
+colnames(rec_M)=c(1:12)
+rownames(rec_M)=c("Best","Worst")
