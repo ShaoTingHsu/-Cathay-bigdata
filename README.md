@@ -6,7 +6,7 @@
 1. 訓練資料集XX筆、測試資料集XX筆
 2. 共有XX個Feature、XX個為類別型資料、XX個為連續型資料
 3. 含有缺失值的變量約為，各個缺失值的缺失比例如下圖
-![image](https://github.com/ShaoTingHsu/Cathay_bigdata_competition/blob/master/%E7%BC%BA%E5%A4%B1%E6%AF%94%E4%BE%8B.PNG)
+![image](https://github.com/ShaoTingHsu/Cathay_bigdata_competition/blob/master/rate_missing.PNG)
 ## 分析過程：
 ### 1. 資料清洗：
 #### (1)資料清理（Data Cleaning）：
@@ -20,7 +20,7 @@
 #### (2)ANN：類神經網路架構進行分類
 #### (3)Stacking：為整合多個模型所使用的技巧
 它和Bagging概念雷同，使用多個模型和不同前處理，各自做出預測機率，以類似加權計算的方式算出最後可能保重大疾病險之機率(0~1之間的分數)。操作方式如下圖：
-![image](https://github.com/ShaoTingHsu/Cathay_bigdata_competition/blob/master/Staking.png)
+![image](https://github.com/ShaoTingHsu/Cathay_bigdata_competition/blob/master/Staking_operation.png)
 ## 結果：
 比賽以AUC進行排名：ROC曲線下面積，ROC曲線為計算不同threshold下，同一份答案所算出之對應True Positive Rate(Y軸)以及False Positive Rate(X軸)之值。
 照理來說，預測愈有信心，則AUC愈高，因此使用Stacking來微調各筆資料預測之機率是有意義的。
