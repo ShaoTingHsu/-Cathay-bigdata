@@ -1,11 +1,11 @@
-# Cathay_bigdata_competition
+# Cathay bigdata competition
 國泰大數據競賽，為預測是否保重大疾病險問題。使用logistic regression, XGBoost, ANN, Stacking等技巧。
 
 主辦方整理出一個XY table，其中有各個ID對應之金融、保險紀錄、人口學資料，以及其未來一年是否保重大疾病險。XY table內含缺失值。
 ## 資料探索：
-1. 訓練資料集XX筆、測試資料集XX筆
-2. 共有XX個Feature、XX個為類別型資料、XX個為連續型資料
-3. 含有缺失值的變量約為，各個缺失值的缺失比例如下圖
+1. 訓練資料集100,000筆、測試資料集150,000筆
+2. 共有131個Feature
+3. 含有缺失值的變量約為65，各個缺失值的缺失比例如下圖
 ![image](https://github.com/ShaoTingHsu/Cathay_bigdata_competition/blob/master/rate_missing.PNG)
 ## 分析過程：
 ### 1. 資料清洗：
