@@ -24,3 +24,4 @@
 ## 結果：
 比賽以AUC進行排名：ROC曲線下面積，ROC曲線為計算不同threshold下，同一份答案所算出之對應True Positive Rate(Y軸)以及False Positive Rate(X軸)之值。
 照理來說，預測愈有信心，則AUC愈高，因此使用Stacking來微調各筆資料預測之機率是有意義的。
+最終Public AUC到達0.850789，為9/244名；Private AUC到達0.846202，為21/244名。
