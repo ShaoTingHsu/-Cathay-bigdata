@@ -5,7 +5,8 @@
 ## 資料探索：
 1. 訓練資料集100,000筆、測試資料集150,000筆
 2. 共有131個Feature
-3. 含有缺失值的變量約為65，各個缺失值的缺失比例如下圖
+3. ground truth的分佈為：2%為保重大疾病險、98%為沒有保重大疾病險
+4. 含有缺失值的變量約為65，各個缺失值的缺失比例如下圖
 ![image](https://github.com/ShaoTingHsu/Cathay_bigdata_competition/blob/master/Pictures/rate_missing.PNG)
 ## 分析過程：
 ### 1. 資料清洗：
@@ -16,9 +17,12 @@
 #### (3)資料轉換（Data Transformation）：
 根據使用情境不同，我們有做出不同版本的前處理，主要在一些變量的標準化、類別資料的轉換(dummy variable)
 ### 2. 建立模型：
-#### (1)XGBoost：Boosting架構預測器
-#### (2)ANN：類神經網路架構進行分類
-#### (3)Stacking：為整合多個模型所使用的技巧
+#### (1)Unbalance data如何解決
+i. 使用SMOTE(Synthetic MinorityOversampling Technique)方法，模擬生成不平衡資料中較少的一方。
+ii. 使用能針對不平衡資料中較少一方敏感的loss function來訓練模型。如：AUC、logloss。
+#### (2)XGBoost：Boosting架構預測器
+#### (3)ANN：類神經網路架構進行分類
+#### (4)Stacking：為整合多個模型所使用的技巧
 它和Bagging概念雷同，使用多個模型和不同前處理，各自做出預測機率，以類似加權計算的方式算出最後可能保重大疾病險之機率(0~1之間的分數)。操作方式如下圖：
 ![image](https://github.com/ShaoTingHsu/Cathay_bigdata_competition/blob/master/Pictures/Staking_operation.png)
 ## 結果：
